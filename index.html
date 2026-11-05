@@ -11,6 +11,20 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     #map { height: 380px; width: 100%; border-radius: 0.75rem; z-index: 10; }
+    .pulse-car {
+      width: 18px;
+      height: 18px;
+      background-color: #0284c7;
+      border: 3px solid #ffffff;
+      border-radius: 50%;
+      box-shadow: 0 0 0 0 rgba(2, 132, 199, 0.7);
+      animation: pulse-ring 1.8s infinite;
+    }
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(2, 132, 199, 0.7); }
+      70% { transform: scale(1.1); box-shadow: 0 0 0 12px rgba(2, 132, 199, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(2, 132, 199, 0); }
+    }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen font-sans pb-16">
@@ -28,6 +42,9 @@
         <span id="modeBadge" class="text-xs px-2.5 py-1 rounded-full font-medium bg-emerald-950 text-emerald-400 border border-emerald-800">
           Driver Mode
         </span>
+        <button id="gpsToggleBtn" onclick="toggleGpsTracking()" class="text-xs bg-emerald-700 hover:bg-emerald-600 text-white font-medium px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5">
+          <span>📡</span> <span id="gpsBtnLabel">Share GPS Location</span>
+        </button>
         <button id="copyShareBtn" onclick="copyViewerLink()" class="text-xs bg-sky-600 hover:bg-sky-500 text-white font-medium px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1">
           <span>🔗</span> Share Link
         </button>
@@ -41,7 +58,7 @@
     <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow">
       <div class="flex justify-between items-center text-sm font-semibold mb-2">
         <span class="text-slate-300">Trip Progress</span>
-        <span id="progressText" class="text-sky-400">0 of 18 Completed (0%)</span>
+        <span id="progressText" class="text-sky-400">0 of 19 Completed (0%)</span>
       </div>
       <div class="w-full bg-slate-700 h-3 rounded-full overflow-hidden">
         <div id="progressBar" class="bg-gradient-to-r from-sky-500 to-emerald-500 h-full w-0 transition-all duration-500"></div>
@@ -49,7 +66,7 @@
       <div class="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-slate-700/60 text-center text-xs">
         <div>
           <div class="text-slate-400">Current Leg</div>
-          <div id="currentLegText" class="font-bold text-white text-sm truncate">Stop 1: Ehrenberg</div>
+          <div id="currentLegText" class="font-bold text-white text-sm truncate">Home Departure</div>
         </div>
         <div>
           <div class="text-slate-400">Lexus Fuel Left</div>
@@ -65,7 +82,12 @@
     <!-- Interactive Route Map -->
     <div class="bg-slate-800 border border-slate-700 rounded-xl p-3 shadow">
       <div class="flex justify-between items-center mb-2 px-1">
-        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Live Route Map</span>
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Live Route Map</span>
+          <span id="gpsStatusPill" class="hidden text-[10px] px-2 py-0.5 rounded-full font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800 animate-pulse">
+            ● GPS Active
+          </span>
+        </div>
         <span class="text-xs text-slate-400" id="mapStatus">OpenStreetMap (No API Key Required)</span>
       </div>
       <div id="map"></div>
@@ -78,9 +100,7 @@
         <span class="text-xs text-slate-400" id="filterNote">Tap check-in as you complete stops</span>
       </div>
 
-      <div id="stopsContainer" class="space-y-3">
-        <!-- Rendered by JS -->
-      </div>
+      <div id="stopsContainer" class="space-y-3"></div>
     </div>
 
   </main>
@@ -117,6 +137,8 @@
       document.getElementById('modeBadge').textContent = 'Viewer Mode (Read-Only)';
       document.getElementById('modeBadge').className = 'text-xs px-2.5 py-1 rounded-full font-medium bg-sky-950 text-sky-400 border border-sky-800';
       document.getElementById('filterNote').textContent = 'Live updates from driver';
+      const gpsBtn = document.getElementById('gpsToggleBtn');
+      if (gpsBtn) gpsBtn.style.display = 'none';
     }
 
     let completedStops = JSON.parse(localStorage.getItem('roadtrip_completed_stops') || '[]');
@@ -144,6 +166,64 @@
       marker.bindPopup(`<b>${s.name}</b><br>${s.time}<br>${s.address}`);
       markers.push(marker);
     });
+
+    let gpsWatchId = null;
+    let userLocationMarker = null;
+
+    function toggleGpsTracking() {
+      const btn = document.getElementById('gpsToggleBtn');
+      const pill = document.getElementById('gpsStatusPill');
+
+      if (gpsWatchId !== null) {
+        navigator.geolocation.clearWatch(gpsWatchId);
+        gpsWatchId = null;
+        if (userLocationMarker) {
+          map.removeLayer(userLocationMarker);
+          userLocationMarker = null;
+        }
+        btn.className = "text-xs bg-emerald-700 hover:bg-emerald-600 text-white font-medium px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5";
+        btn.innerHTML = "<span>📡</span> <span id='gpsBtnLabel'>Share GPS Location</span>";
+        pill.classList.add('hidden');
+        document.getElementById('mapStatus').textContent = "OpenStreetMap (GPS Inactive)";
+      } else {
+        if (!navigator.geolocation) {
+          alert("Geolocation is not supported by your browser.");
+          return;
+        }
+
+        btn.className = "text-xs bg-rose-700 hover:bg-rose-600 text-white font-medium px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5";
+        btn.innerHTML = "<span>⏹</span> <span id='gpsBtnLabel'>Stop Sharing GPS</span>";
+        pill.classList.remove('hidden');
+        document.getElementById('mapStatus').textContent = "Locating vehicle...";
+
+        gpsWatchId = navigator.geolocation.watchPosition(
+          (pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            const speedMph = pos.coords.speed ? (pos.coords.speed * 2.23694).toFixed(0) : 0;
+
+            if (!userLocationMarker) {
+              const carIcon = L.divIcon({
+                className: 'pulse-car',
+                iconSize: [18, 18],
+                iconAnchor: [9, 9]
+              });
+              userLocationMarker = L.marker([lat, lng], { icon: carIcon }).addTo(map);
+            } else {
+              userLocationMarker.setLatLng([lat, lng]);
+            }
+
+            userLocationMarker.bindPopup(`<b>Your Lexus RX300</b><br>Speed: ${speedMph} mph<br>Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`);
+            document.getElementById('mapStatus').textContent = `Speed: ${speedMph} mph • Live GPS Tracking`;
+          },
+          (err) => {
+            alert("Unable to retrieve GPS: " + err.message);
+            toggleGpsTracking();
+          },
+          { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 }
+        );
+      }
+    }
 
     function toggleStop(id) {
       if (isViewer) return;
