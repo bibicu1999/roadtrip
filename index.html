@@ -741,12 +741,12 @@
         scrollWheelZoom: false
       }).setView(startCoord, 5);
 
-      // Clean CartoDB Dark Matter / Positron tiles for high-contrast road trip visualization
-      // REPLACE THIS:
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
-        maxZoom: 18
-      }).addTo(map);
+      // Initialize Map with 100% Free OpenStreetMap (No API Key Required)
+const map = L.map('map').setView([31.5, -99.5], 4);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19,
+  attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
 
       // Draw overall route line
       const latLngs = ITINERARY.map(s => [s.lat, s.lng]);
