@@ -6,9 +6,9 @@
   <title>Anaheim to Port Charlotte - Road Trip Tracker</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Leaflet CSS & JS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Reliable Cloudflare CDN for Leaflet -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <style>
     #map { height: 380px; width: 100%; border-radius: 0.75rem; z-index: 10; }
     .pulse-car {
@@ -126,46 +126,4 @@
       { id: 4, day: 1, type: "fuel", name: "Stop 4: Love's Travel Stop #276", address: "900 W Motel Dr, Lordsburg, NM 88045", lat: 32.3540, lng: -108.7352, time: "12:45 PM MST", price: 3.57, gal: 7.65, fuelLeft: 9.55, notes: "I-10 Exit 22; undercuts Las Cruces" },
       { id: 5, day: 1, type: "fuel", name: "Stop 5: Sam's Club #4784", address: "2711 N Telshor Blvd, Las Cruces, NM", lat: 32.3471, lng: -106.7670, time: "02:55 PM MST", price: 3.83, gal: 6.15, fuelLeft: 11.05, notes: "Las Cruces Sam's Club" },
       { id: 6, day: 1, type: "fuel", name: "Stop 6: Valero", address: "IH-10 Exit 206, Balmorhea, TX", lat: 30.9928, lng: -103.6628, time: "08:00 PM CST", price: 4.11, gal: 11.85, fuelLeft: 5.35, notes: "Cross into Central (+1 hr CST)" },
-      { id: 7, day: 1, type: "hotel", name: "HOTEL 1: Fort Stockton Overnight", address: "1308 North U S Highway 285, Fort Stockton, TX 79735", lat: 30.8983, lng: -102.9037, time: "09:05 PM CST", price: 0, gal: 0, fuelLeft: 14.65, notes: "Overnight sleep ~9 hrs; depart 6:10 AM CST" },
-      
-      { id: 8, day: 2, type: "fuel", name: "Stop 7: Alon", address: "1928 Main St (Exit 456), Junction, TX", lat: 30.4944, lng: -99.7779, time: "08:55 AM CST", price: 3.59, gal: 11.60, fuelLeft: 4.45, notes: "Hill Country gateway corridor" },
-      { id: 9, day: 2, type: "fuel", name: "Stop 8: Sam's Club #4764", address: "20424 Katy Fwy (Exit 748), Katy, TX", lat: 29.7874, lng: -95.7259, time: "01:05 PM CST", price: 3.36, gal: 13.25, fuelLeft: 3.95, notes: "Top Tier fuel; Exit 748" },
-      { id: 10, day: 2, type: "fuel", name: "Stop 9: Valero", address: "2021 Rees St (Exit 109), Breaux Bridge, LA", lat: 30.2920, lng: -91.9147, time: "05:20 PM CST", price: 3.33, gal: 12.50, fuelLeft: 4.70, notes: "Directly off I-10; avoids Lafayette traffic" },
-      { id: 11, day: 2, type: "fuel", name: "Stop 10: Sam's Club #6220", address: "181 Northshore Blvd, Slidell, LA 70460", lat: 30.3099, lng: -89.8286, time: "07:55 PM CST", price: 3.39, gal: 7.30, fuelLeft: 9.90, notes: "Open until 10 PM (2h buffer)" },
-      { id: 12, day: 2, type: "hotel", name: "HOTEL 2: At Home Inn & Suites", address: "6550 Pensacola Boulevard, Pensacola, FL 32505", lat: 30.4850, lng: -87.2567, time: "10:45 PM CST", price: 0, gal: 0, fuelLeft: 9.50, notes: "Overnight sleep ~8h 15m; depart 7:00 AM CST" },
-      
-      { id: 13, day: 3, type: "fuel", name: "Stop 11: RaceWay 6716", address: "7271 Pensacola Blvd, Pensacola, FL 32505", lat: 30.4977, lng: -87.2645, time: "07:03 AM CST", price: 3.46, gal: 7.70, fuelLeft: 9.50, notes: "0.8 mi from hotel; top off full (17.2 gal)" },
-      { id: 14, day: 3, type: "fuel", name: "Stop 12: BP", address: "2112 Highway 71 S (Exit 142), Marianna, FL", lat: 30.7188, lng: -85.1839, time: "09:15 AM CST", price: 3.53, gal: 6.15, fuelLeft: 11.05, notes: "Morning Panhandle stop" },
-      { id: 15, day: 3, type: "fuel", name: "Stop 13: Flying J Travel Center #724", address: "3888 W US Hwy 90, Lake City, FL 32055", lat: 30.1982, lng: -82.6841, time: "01:10 PM EST", price: 3.37, gal: 8.40, fuelLeft: 8.80, notes: "Cross into Eastern (+1 hr); I-75 Exit 427" },
-      { id: 16, day: 3, type: "fuel", name: "Stop 14: Pilot Travel Center", address: "766 E FL-44 (Exit 329), Wildwood, FL", lat: 28.8789, lng: -82.1161, time: "03:00 PM EST", price: 3.34, gal: 4.55, fuelLeft: 12.65, notes: "I-75 / Turnpike interchange" },
-      { id: 17, day: 3, type: "fuel", name: "Stop 15: Sarasota Area Average", address: "I-75 / University Pkwy corridor, Sarasota, FL", lat: 27.3872, lng: -82.4431, time: "05:10 PM EST", price: 3.77, gal: 7.65, fuelLeft: 11.70, notes: "Final quick buffer fill" },
-      { id: 18, day: 3, type: "destination", name: "FINAL: Destination Arrival", address: "326 Perl St, Port Charlotte, FL 33954", lat: 27.0234, lng: -82.0783, time: "06:15 PM EST", price: 0, gal: 0, fuelLeft: 15.00, notes: "Trip complete at dusk with ~15.0 gal reserve!" }
-    ];
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const isViewer = urlParams.get('mode') === 'viewer';
-
-    if (isViewer) {
-      document.getElementById('modeBadge').textContent = 'Viewer Mode (Read-Only)';
-      document.getElementById('modeBadge').className = 'text-xs px-2.5 py-1 rounded-full font-medium bg-sky-950 text-sky-400 border border-sky-800';
-      document.getElementById('filterNote').textContent = 'Live updates from driver';
-      const startBtn = document.getElementById('startGpsBtn');
-      const stopBtn = document.getElementById('stopGpsBtn');
-      if (startBtn) startBtn.style.display = 'none';
-      if (stopBtn) stopBtn.style.display = 'none';
-    }
-
-    let completedStops = JSON.parse(localStorage.getItem('roadtrip_completed_stops') || '[]');
-
-    const map = L.map('map').setView([31.5, -99.5], 4);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
-
-    const latlngs = STOPS_DATA.map(s => [s.lat, s.lng]);
-    const routeLine = L.polyline(latlngs, { color: '#0284c7', weight: 4, opacity: 0.8 }).addTo(map);
-    map.fitBounds(routeLine.getBounds(), { padding: [25, 25] });
-
-    const markers = [];
-    STOPS
+      { id: 7, day: 1, type: "hotel", name
