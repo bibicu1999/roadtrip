@@ -2,1219 +2,276 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Lexus RX300 Coast-to-Coast Trip Tracker</title>
-  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anaheim to Port Charlotte - Road Trip Tracker</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              50: '#f0f9ff',
-              100: '#e0f2fe',
-              500: '#0ea5e9',
-              600: '#0284c7',
-              700: '#0369a1',
-            }
-          }
-        }
-      }
-    }
-  </script>
-
-  <!-- Google Fonts: Inter -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
-  <!-- FontAwesome Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-  <!-- Leaflet Maps CSS & JS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-
+  <!-- Leaflet CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      -webkit-tap-highlight-color: transparent;
-    }
-    #map {
-      height: 340px;
-      z-index: 10;
-    }
-    @media (min-width: 768px) {
-      #map {
-        height: 420px;
-      }
-    }
-    /* Pulse animation for active target pin and live GPS */
-    @keyframes pulse-ring {
-      0% { transform: scale(0.95); opacity: 0.9; }
-      50% { transform: scale(1.4); opacity: 0.2; }
-      100% { transform: scale(0.95); opacity: 0.9; }
-    }
-    .gps-pulse {
-      animation: pulse-ring 2s infinite ease-in-out;
-    }
-    /* Hide scrollbars for slick tabs */
-    .no-scrollbar::-webkit-scrollbar {
-      display: none;
-    }
-    .no-scrollbar {
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-    }
+    #map { height: 380px; width: 100%; border-radius: 0.75rem; z-index: 10; }
   </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen pb-16 antialiased selection:bg-sky-500 selection:text-white">
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans pb-16">
 
-  <!-- Top Sticky Navigation & Status Bar -->
-  <header class="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800">
-    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-      <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20 text-white font-black text-lg">
-          <i class="fa-solid fa-car-side"></i>
-        </div>
-        <div>
-          <h1 class="text-base sm:text-lg font-bold leading-tight flex items-center gap-2">
-            Anaheim <i class="fa-solid fa-arrow-right text-xs text-sky-400"></i> Port Charlotte
-          </h1>
-          <p class="text-xs text-slate-400">2000 Lexus RX300 AWD • 2,558 mi • 3 Days</p>
-        </div>
+  <!-- Header -->
+  <header class="bg-slate-800/90 backdrop-blur border-b border-slate-700 sticky top-0 z-50 px-4 py-3 shadow-md">
+    <div class="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      <div>
+        <h1 class="text-lg md:text-xl font-bold tracking-tight text-white flex items-center gap-2">
+          <span>🚗</span> Anaheim to Port Charlotte Tracker
+        </h1>
+        <p class="text-xs text-slate-400">2000 Lexus RX300 AWD • 2,558 mi • I-10 to I-75</p>
       </div>
-
-      <!-- Mode & Share Controls -->
       <div class="flex items-center gap-2">
-        <button id="shareBtn" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-400 text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5 shadow-sm">
-          <i class="fa-solid fa-share-nodes"></i>
-          <span class="hidden sm:inline">Share Live Link</span>
+        <span id="modeBadge" class="text-xs px-2.5 py-1 rounded-full font-medium bg-emerald-950 text-emerald-400 border border-emerald-800">
+          Driver Mode
+        </span>
+        <button id="copyShareBtn" onclick="copyViewerLink()" class="text-xs bg-sky-600 hover:bg-sky-500 text-white font-medium px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1">
+          <span>🔗</span> Share Link
         </button>
-
-        <div id="modeBadge" class="flex items-center bg-slate-800 border border-slate-700 rounded-lg p-0.5">
-          <button id="driverModeToggle" class="px-2.5 py-1 text-xs font-semibold rounded-md transition flex items-center gap-1">
-            <i class="fa-solid fa-id-badge text-xs"></i>
-            <span id="modeText">Driver Mode</span>
-          </button>
-        </div>
       </div>
     </div>
   </header>
 
-  <!-- Main Container -->
-  <main class="max-w-5xl mx-auto px-4 pt-4 space-y-4">
-
-    <!-- Mode Banner & Live Sync Status -->
-    <div id="statusBanner" class="p-3 bg-gradient-to-r from-sky-950/80 to-slate-900 border border-sky-800/60 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs">
-      <div class="flex items-center gap-2">
-        <span class="relative flex h-2.5 w-2.5">
-          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-          <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-        </span>
-        <span id="cloudStatus" class="font-medium text-slate-300">Live Sync Connected</span>
-        <span class="text-slate-500">•</span>
-        <span id="viewerNotice" class="text-sky-300 font-medium">Viewing real-time trip progress</span>
+  <main class="max-w-4xl mx-auto px-4 mt-4 space-y-4">
+    
+    <!-- Top Progress Card -->
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow">
+      <div class="flex justify-between items-center text-sm font-semibold mb-2">
+        <span class="text-slate-300">Trip Progress</span>
+        <span id="progressText" class="text-sky-400">0 of 18 Completed (0%)</span>
       </div>
-      <div class="flex items-center gap-2">
-        <button id="gpsToggleBtn" class="hidden px-2.5 py-1 rounded bg-sky-600 hover:bg-sky-500 text-white font-medium transition flex items-center gap-1 shadow-sm">
-          <i class="fa-solid fa-satellite-dish text-xs"></i>
-          <span id="gpsBtnText">Broadcast Phone GPS</span>
-        </button>
+      <div class="w-full bg-slate-700 h-3 rounded-full overflow-hidden">
+        <div id="progressBar" class="bg-gradient-to-r from-sky-500 to-emerald-500 h-full w-0 transition-all duration-500"></div>
       </div>
-    </div>
-
-    <!-- Overall Trip Metrics Banner -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-      <div class="bg-slate-800/80 border border-slate-700/80 rounded-xl p-3 shadow-sm">
-        <div class="text-[11px] font-semibold tracking-wider text-slate-400 uppercase">Trip Progress</div>
-        <div class="text-lg sm:text-xl font-bold text-white mt-0.5 flex items-baseline gap-1">
-          <span id="statCompletedStops">0</span>
-          <span class="text-xs text-slate-400 font-normal">/ 18 milestones</span>
-        </div>
-        <div class="w-full bg-slate-700/70 h-1.5 rounded-full mt-2 overflow-hidden">
-          <div id="statProgressBar" class="bg-sky-500 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div>
-        </div>
-      </div>
-
-      <div class="bg-slate-800/80 border border-slate-700/80 rounded-xl p-3 shadow-sm">
-        <div class="text-[11px] font-semibold tracking-wider text-slate-400 uppercase">Distance Driven</div>
-        <div class="text-lg sm:text-xl font-bold text-white mt-0.5 flex items-baseline gap-1">
-          <span id="statMilesDriven">0</span>
-          <span class="text-xs text-slate-400 font-normal">/ 2,558 mi</span>
-        </div>
-        <div id="statMilesPct" class="text-[11px] text-slate-400 mt-1 font-medium">0% of total route</div>
-      </div>
-
-      <div class="bg-slate-800/80 border border-slate-700/80 rounded-xl p-3 shadow-sm">
-        <div class="text-[11px] font-semibold tracking-wider text-slate-400 uppercase">Fuel Burned</div>
-        <div class="text-lg sm:text-xl font-bold text-amber-400 mt-0.5 flex items-baseline gap-1">
-          <span id="statFuelBurned">0.0</span>
-          <span class="text-xs text-slate-400 font-normal">/ 127.8 gal</span>
-        </div>
-        <div class="text-[11px] text-slate-400 mt-1 font-medium">17.2 gal tank (AWD)</div>
-      </div>
-
-      <div class="bg-slate-800/80 border border-slate-700/80 rounded-xl p-3 shadow-sm">
-        <div class="text-[11px] font-semibold tracking-wider text-slate-400 uppercase">Fuel Spend</div>
-        <div class="text-lg sm:text-xl font-bold text-emerald-400 mt-0.5 flex items-baseline gap-1">
-          <span id="statFuelSpend">$0.00</span>
-          <span class="text-xs text-slate-400 font-normal">/ ~$465</span>
-        </div>
-        <div class="text-[11px] text-slate-400 mt-1 font-medium">Top Tier & Wholesale</div>
-      </div>
-    </div>
-
-    <!-- Active Next Milestone Action Card -->
-    <div id="currentMilestoneCard" class="bg-gradient-to-br from-slate-800 via-slate-800/90 to-sky-950/40 border-2 border-sky-500/60 rounded-2xl p-4 sm:p-5 shadow-xl relative overflow-hidden">
-      <div class="absolute -right-12 -bottom-12 w-40 h-40 bg-sky-500/10 rounded-full blur-2xl pointer-events-none"></div>
-
-      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-700/60 pb-3">
-        <div class="flex items-center gap-2">
-          <span class="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-sky-500/20 text-sky-400 border border-sky-500/30">
-            Current Target
-          </span>
-          <span id="activeDayBadge" class="text-xs text-slate-400 font-medium">Day 1</span>
-        </div>
-        <div id="activeEta" class="text-xs sm:text-sm font-semibold text-slate-300">
-          Target ETA: <span class="text-sky-400 font-bold">--</span>
-        </div>
-      </div>
-
-      <div class="mt-3 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div class="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-slate-700/60 text-center text-xs">
         <div>
-          <h2 id="activeName" class="text-xl sm:text-2xl font-black text-white tracking-tight">Loading Itinerary...</h2>
-          <p id="activeAddress" class="text-xs sm:text-sm text-slate-300 mt-1 flex items-start gap-1.5">
-            <i class="fa-solid fa-location-dot text-sky-400 mt-1"></i>
-            <span>--</span>
-          </p>
-          <div id="activeFuelInfo" class="flex flex-wrap items-center gap-3 mt-2 text-xs font-medium text-slate-400">
-            <!-- Dynamic Fuel Details -->
-          </div>
+          <div class="text-slate-400">Current Leg</div>
+          <div id="currentLegText" class="font-bold text-white text-sm truncate">Stop 1: Ehrenberg</div>
         </div>
-
-        <div class="flex flex-wrap items-center gap-2 sm:self-center">
-          <!-- External Nav Links -->
-          <a id="activeAppleMaps" href="#" target="_blank" class="px-3 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold transition flex items-center gap-1.5 border border-slate-600 shadow-sm">
-            <i class="fa-brands fa-apple text-sm"></i>
-            <span>Apple Maps</span>
-          </a>
-          <a id="activeGoogleMaps" href="#" target="_blank" class="px-3 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold transition flex items-center gap-1.5 border border-slate-600 shadow-sm">
-            <i class="fa-solid fa-map-location-dot text-sm text-emerald-400"></i>
-            <span>Google Maps</span>
-          </a>
-
-          <!-- Check-in Button (Visible for Driver) -->
-          <button id="checkInBtn" class="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs sm:text-sm font-bold shadow-lg shadow-emerald-500/25 transition active:scale-95 flex items-center gap-2">
-            <i class="fa-solid fa-circle-check text-sm"></i>
-            <span>Check In Here</span>
-          </button>
+        <div>
+          <div class="text-slate-400">Lexus Fuel Left</div>
+          <div id="estFuelText" class="font-bold text-amber-400 text-sm">~17.2 Gal</div>
+        </div>
+        <div>
+          <div class="text-slate-400">Total Spent</div>
+          <div id="totalSpentText" class="font-bold text-emerald-400 text-sm">$0.00</div>
         </div>
       </div>
     </div>
 
-    <!-- Interactive Leaflet Map Card -->
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden shadow-lg">
-      <div class="px-4 py-2.5 bg-slate-800/90 border-b border-slate-700 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <i class="fa-solid fa-map text-sky-400 text-sm"></i>
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-300">Route Map & GPS Tracking</span>
-        </div>
-        <div class="flex items-center gap-3 text-[11px] text-slate-400 font-medium">
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Reached</span>
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-sky-400 animate-pulse"></span> Next</span>
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-slate-500"></span> Upcoming</span>
-        </div>
+    <!-- Interactive Route Map -->
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-3 shadow">
+      <div class="flex justify-between items-center mb-2 px-1">
+        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Live Route Map</span>
+        <span class="text-xs text-slate-400" id="mapStatus">OpenStreetMap (No API Key Required)</span>
       </div>
       <div id="map"></div>
     </div>
 
-    <!-- Day Filter Tabs -->
-    <div class="flex items-center justify-between border-b border-slate-800 pb-2 pt-2">
-      <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
-        <button data-day="all" class="day-tab px-3.5 py-1.5 rounded-xl text-xs font-bold transition bg-sky-500 text-white shadow-md shadow-sky-500/20">All Days (18)</button>
-        <button data-day="1" class="day-tab px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition">Day 1: Anaheim → Ft. Stockton</button>
-        <button data-day="2" class="day-tab px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition">Day 2: Ft. Stockton → Pensacola</button>
-        <button data-day="3" class="day-tab px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition">Day 3: Pensacola → Pt. Charlotte</button>
+    <!-- Stops Timeline -->
+    <div class="space-y-3">
+      <div class="flex items-center justify-between px-1">
+        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400">Itinerary & Check-ins</h2>
+        <span class="text-xs text-slate-400" id="filterNote">Tap check-in as you complete stops</span>
       </div>
 
-      <button id="resetDemoBtn" title="Reset all check-ins back to starting state" class="hidden text-xs text-slate-500 hover:text-rose-400 font-medium transition px-2 py-1">
-        <i class="fa-solid fa-rotate-left mr-1"></i>Reset
-      </button>
-    </div>
-
-    <!-- List of All Milestones / Stops -->
-    <div id="stopsContainer" class="space-y-3 pb-8">
-      <!-- Stop Cards Rendered Dynamically -->
+      <div id="stopsContainer" class="space-y-3">
+        <!-- Rendered by JS -->
+      </div>
     </div>
 
   </main>
 
-  <!-- Share Modal Dialog -->
-  <div id="shareModal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5 max-w-md w-full shadow-2xl relative">
-      <button id="closeShareModal" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
+  <script>
+    const STOPS_DATA = [
+      { id: 0, day: 1, type: "origin", name: "Home Departure", address: "1866 S Eileen Dr, Anaheim, CA 92802", lat: 33.8008, lng: -117.9359, time: "01:00 AM PST", price: 0, gal: 0, fuelLeft: 17.20, notes: "Depart on full tank (17.2 gal)" },
+      { id: 1, day: 1, type: "fuel", name: "Stop 1: Charge N Go", address: "49998 Ehrenberg Poston Hwy, Ehrenberg, AZ", lat: 33.6095, lng: -114.5169, time: "05:25 AM MST", price: 4.19, gal: 10.35, fuelLeft: 6.85, notes: "AZ border stop; clocks +1 hr MST" },
+      { id: 2, day: 1, type: "fuel", name: "Stop 2: Costco Wholesale #1653", address: "1111 N Verrado Way, Buckeye, AZ 85326", lat: 33.4597, lng: -112.5002, time: "07:25 AM MST", price: 4.16, gal: 5.60, fuelLeft: 11.60, notes: "I-10 Exit 120 (Verrado Way); Top Tier fuel" },
+      { id: 3, day: 1, type: "fuel", name: "Stop 3: Costco Wholesale #1079", address: "1650 E Tucson Marketplace Blvd, Tucson, AZ", lat: 32.1801, lng: -110.9468, time: "10:00 AM MST", price: 3.66, gal: 7.15, fuelLeft: 10.05, notes: "Tucson Marketplace; Exit 262 on I-10" },
+      { id: 4, day: 1, type: "fuel", name: "Stop 4: Love's Travel Stop #276", address: "900 W Motel Dr, Lordsburg, NM 88045", lat: 32.3540, lng: -108.7352, time: "12:45 PM MST", price: 3.57, gal: 7.65, fuelLeft: 9.55, notes: "I-10 Exit 22; undercuts Las Cruces" },
+      { id: 5, day: 1, type: "fuel", name: "Stop 5: Sam's Club #4784", address: "2711 N Telshor Blvd, Las Cruces, NM", lat: 32.3471, lng: -106.7670, time: "02:55 PM MST", price: 3.83, gal: 6.15, fuelLeft: 11.05, notes: "Las Cruces Sam's Club" },
+      { id: 6, day: 1, type: "fuel", name: "Stop 6: Valero", address: "IH-10 Exit 206, Balmorhea, TX", lat: 30.9928, lng: -103.6628, time: "08:00 PM CST", price: 4.11, gal: 11.85, fuelLeft: 5.35, notes: "Cross into Central (+1 hr CST)" },
+      { id: 7, day: 1, type: "hotel", name: "HOTEL 1: Fort Stockton Overnight", address: "1308 North U S Highway 285, Fort Stockton, TX 79735", lat: 30.8983, lng: -102.9037, time: "09:05 PM CST", price: 0, gal: 0, fuelLeft: 14.65, notes: "Overnight sleep ~9 hrs; depart 6:10 AM CST" },
       
-      <div class="w-12 h-12 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center text-xl mb-3 border border-sky-500/30">
-        <i class="fa-solid fa-paper-plane"></i>
-      </div>
-      <h3 class="text-lg font-bold text-white">Share Live Progress</h3>
-      <p class="text-xs text-slate-300 mt-1">
-        Share this read-only link with family or friends. They will see your completed stops, next targets, and live updates as you check in without accidentally modifying data.
-      </p>
-
-      <div class="mt-4 flex items-center gap-2">
-        <input id="shareLinkInput" readonly class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-sky-500 font-mono" value="">
-        <button id="copyShareBtn" class="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md">
-          <i class="fa-regular fa-copy"></i>
-          <span id="copyBtnLabel">Copy</span>
-        </button>
-      </div>
-      <div id="copySuccessMsg" class="text-emerald-400 text-xs font-medium mt-2 hidden flex items-center gap-1">
-        <i class="fa-solid fa-circle-check"></i> Link copied to clipboard!
-      </div>
-    </div>
-  </div>
-
-  <!-- Toast Message -->
-  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-800 border border-slate-600 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-2xl transition-all duration-300 opacity-0 pointer-events-none flex items-center gap-2">
-    <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
-    <span id="toastMsg">Check-in recorded!</span>
-  </div>
-
-  <!-- Firebase Scripts (Modular SDK v11.6.1) -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-    // --- Master Itinerary Definition ---
-    const ITINERARY = [
-      // DAY 1
-      {
-        id: "stop_0",
-        day: 1,
-        type: "origin",
-        name: "Trip Start: Anaheim, CA",
-        address: "1866 S Eileen Dr, Anaheim, CA 92802",
-        lat: 33.800833,
-        lng: -117.935884,
-        schedArrival: "01:00 AM (Day 1) PST",
-        schedDepart: "01:00 AM (Day 1) PST",
-        legMiles: 0,
-        fuelPrice: 0,
-        gallons: 0,
-        cost: 0,
-        notes: "Depart on full tank (17.2 gal) in 2000 Lexus RX300 AWD"
-      },
-      {
-        id: "stop_1",
-        day: 1,
-        type: "fuel",
-        name: "Stop 1: Charge N Go",
-        address: "49998 Ehrenberg Poston Hwy, Ehrenberg, AZ 85334",
-        lat: 33.609509,
-        lng: -114.516900,
-        schedArrival: "05:25 AM MST",
-        schedDepart: "05:45 AM MST",
-        legMiles: 210,
-        fuelPrice: 4.19,
-        gallons: 10.35,
-        cost: 43.37,
-        notes: "Cross into AZ (+1 hr MST); desert corridor top-off"
-      },
-      {
-        id: "stop_2",
-        day: 1,
-        type: "fuel",
-        name: "Stop 2: Costco Wholesale #1653",
-        address: "1111 N Verrado Way, Buckeye, AZ 85326",
-        lat: 33.459749,
-        lng: -112.500241,
-        schedArrival: "07:25 AM MST",
-        schedDepart: "07:45 AM MST",
-        legMiles: 115,
-        fuelPrice: 4.16,
-        gallons: 5.60,
-        cost: 23.30,
-        notes: "I-10 Exit 120 (Verrado Way); Top Tier fuel"
-      },
-      {
-        id: "stop_3",
-        day: 1,
-        type: "fuel",
-        name: "Stop 3: Costco Wholesale #1079",
-        address: "1650 E Tucson Marketplace Blvd, Tucson, AZ 85713",
-        lat: 32.180073,
-        lng: -110.946844,
-        schedArrival: "10:00 AM MST",
-        schedDepart: "10:25 AM MST",
-        legMiles: 147,
-        fuelPrice: 3.66,
-        gallons: 7.15,
-        cost: 26.17,
-        notes: "Tucson Marketplace; I-10 Exit 262"
-      },
-      {
-        id: "stop_4",
-        day: 1,
-        type: "fuel",
-        name: "Stop 4: Love's Travel Stop #276",
-        address: "900 W Motel Dr, Lordsburg, NM 88045",
-        lat: 32.353958,
-        lng: -108.735223,
-        schedArrival: "12:45 PM MST",
-        schedDepart: "01:05 PM MST",
-        legMiles: 153,
-        fuelPrice: 3.57,
-        gallons: 7.65,
-        cost: 27.31,
-        notes: "I-10 Exit 22; beats Las Cruces fuel prices"
-      },
-      {
-        id: "stop_5",
-        day: 1,
-        type: "fuel",
-        name: "Stop 5: Sam's Club #4784",
-        address: "2711 N Telshor Blvd, Las Cruces, NM 88011",
-        lat: 32.347121,
-        lng: -106.766959,
-        schedArrival: "02:55 PM MST",
-        schedDepart: "03:20 PM MST",
-        legMiles: 123,
-        fuelPrice: 3.83,
-        gallons: 6.15,
-        cost: 23.55,
-        notes: "Wholesale savings vs local truck stops"
-      },
-      {
-        id: "stop_6",
-        day: 1,
-        type: "fuel",
-        name: "Stop 6: Valero Travel Stop",
-        address: "19525 IH 10 (Exit 206), Balmorhea, TX 79718",
-        lat: 30.992781,
-        lng: -103.662786,
-        schedArrival: "08:00 PM CST",
-        schedDepart: "08:20 PM CST",
-        legMiles: 239,
-        fuelPrice: 4.11,
-        gallons: 11.85,
-        cost: 48.70,
-        notes: "Cross to Central Time (+1 hr CST); remote West TX"
-      },
-      {
-        id: "stop_7",
-        day: 1,
-        type: "hotel",
-        name: "Hotel 1: Fort Stockton Overnight",
-        address: "1308 N US Hwy 285, Fort Stockton, TX 79735",
-        lat: 30.898279,
-        lng: -102.903706,
-        schedArrival: "09:05 PM CST",
-        schedDepart: "06:10 AM (Day 2) CST",
-        legMiles: 51,
-        fuelPrice: 0,
-        gallons: 0,
-        cost: 0,
-        notes: "Overnight rest (~9h 05m sleep); depart 6:10 AM sharp"
-      },
-
-      // DAY 2
-      {
-        id: "stop_8",
-        day: 2,
-        type: "fuel",
-        name: "Stop 7: Alon / Pilot Corridor",
-        address: "1928 N Main St (Exit 456), Junction, TX 76849",
-        lat: 30.494381,
-        lng: -99.777904,
-        schedArrival: "08:55 AM CST",
-        schedDepart: "09:15 AM CST",
-        legMiles: 204,
-        fuelPrice: 3.59,
-        gallons: 11.60,
-        cost: 41.64,
-        notes: "Texas Hill Country gateway; quick on-ramp stop"
-      },
-      {
-        id: "stop_9",
-        day: 2,
-        type: "fuel",
-        name: "Stop 8: Sam's Club #4764",
-        address: "20424 Katy Fwy (Exit 748), Katy, TX 77449",
-        lat: 29.787360,
-        lng: -95.725900,
-        schedArrival: "01:05 PM CST",
-        schedDepart: "01:30 PM CST",
-        legMiles: 245,
-        fuelPrice: 3.36,
-        gallons: 13.25,
-        cost: 44.52,
-        notes: "Top Tier gas; saves over Flying J in Brookshire"
-      },
-      {
-        id: "stop_10",
-        day: 2,
-        type: "fuel",
-        name: "Stop 9: Valero",
-        address: "2021 Rees St (Exit 109), Breaux Bridge, LA 70517",
-        lat: 30.292042,
-        lng: -91.914733,
-        schedArrival: "05:20 PM CST",
-        schedDepart: "05:40 PM CST",
-        legMiles: 240,
-        fuelPrice: 3.33,
-        gallons: 12.50,
-        cost: 41.63,
-        notes: "Right off I-10; avoids Lafayette local congestion"
-      },
-      {
-        id: "stop_11",
-        day: 2,
-        type: "fuel",
-        name: "Stop 10: Sam's Club #6220",
-        address: "181 Northshore Blvd, Slidell, LA 70460",
-        lat: 30.309924,
-        lng: -89.828553,
-        schedArrival: "07:55 PM CST",
-        schedDepart: "08:20 PM CST",
-        legMiles: 135,
-        fuelPrice: 3.39,
-        gallons: 7.30,
-        cost: 24.75,
-        notes: "Arrive with 2h+ buffer before 10 PM close"
-      },
-      {
-        id: "stop_12",
-        day: 2,
-        type: "hotel",
-        name: "Hotel 2: At Home Inn & Suites",
-        address: "6550 Pensacola Blvd, Pensacola, FL 32505",
-        lat: 30.484965,
-        lng: -87.256702,
-        schedArrival: "10:45 PM CST",
-        schedDepart: "07:00 AM (Day 3) CST",
-        legMiles: 155,
-        fuelPrice: 0,
-        gallons: 0,
-        cost: 0,
-        notes: "Overnight rest (~8h 15m sleep); depart 7:00 AM"
-      },
-
-      // DAY 3
-      {
-        id: "stop_13",
-        day: 3,
-        type: "fuel",
-        name: "Stop 11: RaceWay #6716",
-        address: "7271 Pensacola Blvd, Pensacola, FL 32505",
-        lat: 30.497743,
-        lng: -87.264494,
-        schedArrival: "07:03 AM CST",
-        schedDepart: "07:20 AM CST",
-        legMiles: 0.8,
-        fuelPrice: 3.46,
-        gallons: 7.70,
-        cost: 26.64,
-        notes: "0.8 mi from hotel; top off to 100% full before Panhandle"
-      },
-      {
-        id: "stop_14",
-        day: 3,
-        type: "fuel",
-        name: "Stop 12: BP Travel Plaza",
-        address: "2112 Highway 71 S (Exit 142), Marianna, FL 32448",
-        lat: 30.718827,
-        lng: -85.183899,
-        schedArrival: "09:15 AM CST",
-        schedDepart: "09:35 AM CST",
-        legMiles: 123,
-        fuelPrice: 3.53,
-        gallons: 6.15,
-        cost: 21.71,
-        notes: "Panhandle morning fuel top-off"
-      },
-      {
-        id: "stop_15",
-        day: 3,
-        type: "fuel",
-        name: "Stop 13: Flying J Travel Center #724",
-        address: "3888 W US Hwy 90 (Exit 427), Lake City, FL 32055",
-        lat: 30.187311,
-        lng: -82.689712,
-        schedArrival: "01:10 PM EST",
-        schedDepart: "01:30 PM EST",
-        legMiles: 168,
-        fuelPrice: 3.37,
-        gallons: 8.40,
-        cost: 28.31,
-        notes: "Cross to Eastern (+1 hr EST); merge I-10 to I-75 South"
-      },
-      {
-        id: "stop_16",
-        day: 3,
-        type: "fuel",
-        name: "Stop 14: Pilot Travel Center",
-        address: "766 E FL-44 (Exit 329), Wildwood, FL 34785",
-        lat: 28.878949,
-        lng: -82.116052,
-        schedArrival: "03:00 PM EST",
-        schedDepart: "03:20 PM EST",
-        legMiles: 92,
-        fuelPrice: 3.34,
-        gallons: 4.55,
-        cost: 15.20,
-        notes: "I-75 & Florida's Turnpike interchange"
-      },
-      {
-        id: "stop_17",
-        day: 3,
-        type: "fuel",
-        name: "Stop 15: Sarasota Area Corridor",
-        address: "I-75 & University Pkwy, Sarasota, FL 34243",
-        lat: 27.387920,
-        lng: -82.450140,
-        schedArrival: "05:10 PM EST",
-        schedDepart: "05:25 PM EST",
-        legMiles: 110,
-        fuelPrice: 3.77,
-        gallons: 7.65,
-        cost: 28.84,
-        notes: "Final buffer top-off before final stretch"
-      },
-      {
-        id: "stop_18",
-        day: 3,
-        type: "destination",
-        name: "Final Destination: Port Charlotte, FL",
-        address: "326 Perl St, Port Charlotte, FL 33954",
-        lat: 27.023413,
-        lng: -82.078348,
-        schedArrival: "06:15 PM EST",
-        schedDepart: "--",
-        legMiles: 45,
-        fuelPrice: 0,
-        gallons: 0,
-        cost: 0,
-        notes: "Cross-Country Road Trip complete! ~15.0 gal in reserve"
-      }
+      { id: 8, day: 2, type: "fuel", name: "Stop 7: Alon", address: "1928 Main St (Exit 456), Junction, TX", lat: 30.4944, lng: -99.7779, time: "08:55 AM CST", price: 3.59, gal: 11.60, fuelLeft: 4.45, notes: "Hill Country gateway corridor" },
+      { id: 9, day: 2, type: "fuel", name: "Stop 8: Sam's Club #4764", address: "20424 Katy Fwy (Exit 748), Katy, TX", lat: 29.7874, lng: -95.7259, time: "01:05 PM CST", price: 3.36, gal: 13.25, fuelLeft: 3.95, notes: "Top Tier fuel; Exit 748" },
+      { id: 10, day: 2, type: "fuel", name: "Stop 9: Valero", address: "2021 Rees St (Exit 109), Breaux Bridge, LA", lat: 30.2920, lng: -91.9147, time: "05:20 PM CST", price: 3.33, gal: 12.50, fuelLeft: 4.70, notes: "Directly off I-10; avoids Lafayette traffic" },
+      { id: 11, day: 2, type: "fuel", name: "Stop 10: Sam's Club #6220", address: "181 Northshore Blvd, Slidell, LA 70460", lat: 30.3099, lng: -89.8286, time: "07:55 PM CST", price: 3.39, gal: 7.30, fuelLeft: 9.90, notes: "Open until 10 PM (2h buffer)" },
+      { id: 12, day: 2, type: "hotel", name: "HOTEL 2: At Home Inn & Suites", address: "6550 Pensacola Boulevard, Pensacola, FL 32505", lat: 30.4850, lng: -87.2567, time: "10:45 PM CST", price: 0, gal: 0, fuelLeft: 9.50, notes: "Overnight sleep ~8h 15m; depart 7:00 AM CST" },
+      
+      { id: 13, day: 3, type: "fuel", name: "Stop 11: RaceWay 6716", address: "7271 Pensacola Blvd, Pensacola, FL 32505", lat: 30.4977, lng: -87.2645, time: "07:03 AM CST", price: 3.46, gal: 7.70, fuelLeft: 9.50, notes: "0.8 mi from hotel; top off full (17.2 gal)" },
+      { id: 14, day: 3, type: "fuel", name: "Stop 12: BP", address: "2112 Highway 71 S (Exit 142), Marianna, FL", lat: 30.7188, lng: -85.1839, time: "09:15 AM CST", price: 3.53, gal: 6.15, fuelLeft: 11.05, notes: "Morning Panhandle stop" },
+      { id: 15, day: 3, type: "fuel", name: "Stop 13: Flying J Travel Center #724", address: "3888 W US Hwy 90, Lake City, FL 32055", lat: 30.1982, lng: -82.6841, time: "01:10 PM EST", price: 3.37, gal: 8.40, fuelLeft: 8.80, notes: "Cross into Eastern (+1 hr); I-75 Exit 427" },
+      { id: 16, day: 3, type: "fuel", name: "Stop 14: Pilot Travel Center", address: "766 E FL-44 (Exit 329), Wildwood, FL", lat: 28.8789, lng: -82.1161, time: "03:00 PM EST", price: 3.34, gal: 4.55, fuelLeft: 12.65, notes: "I-75 / Turnpike interchange" },
+      { id: 17, day: 3, type: "fuel", name: "Stop 15: Sarasota Area Average", address: "I-75 / University Pkwy corridor, Sarasota, FL", lat: 27.3872, lng: -82.4431, time: "05:10 PM EST", price: 3.77, gal: 7.65, fuelLeft: 11.70, notes: "Final quick buffer fill" },
+      { id: 18, day: 3, type: "destination", name: "FINAL: Destination Arrival", address: "326 Perl St, Port Charlotte, FL 33954", lat: 27.0234, lng: -82.0783, time: "06:15 PM EST", price: 0, gal: 0, fuelLeft: 15.00, notes: "Trip complete at dusk with ~15.0 gal reserve!" }
     ];
 
-    // Total itinerary constants
-    const TOTAL_MILES = 2557.8;
-    const ESTIMATED_GALLONS = 127.85;
-    const ESTIMATED_COST = 465.63;
+    const urlParams = new URLSearchParams(window.location.search);
+    const isViewer = urlParams.get('mode') === 'viewer';
 
-    // --- State Management ---
-    let appState = {
-      isDriver: false,
-      completedStops: {}, // { stop_0: ISOString, stop_1: ISOString }
-      activeStopIndex: 0,
-      driverGps: null, // { lat, lng, lastUpdated }
-      currentFilterDay: 'all'
-    };
-
-    let map = null;
-    let markers = [];
-    let polyline = null;
-    let gpsMarker = null;
-    let watchId = null;
-
-    // --- Firebase Initialization (Using Rule 1 Public Data Doc) ---
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'roadtrip-lexus-rx300';
-    let db = null;
-    let auth = null;
-    let tripDocRef = null;
-
-    async function setupFirebase() {
-      try {
-        if (typeof __firebase_config === 'undefined') {
-          console.warn("Firebase config not available, running in offline demo mode.");
-          loadLocalFallback();
-          return;
-        }
-
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const app = initializeApp(firebaseConfig);
-        auth = getAuth(app);
-        db = getFirestore(app);
-
-        // Sign in priority as mandated by RULE 3
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
-        }
-
-        // Strict Path Rule: /artifacts/{appId}/public/data/{collectionName}/{docId}
-        tripDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'trip_progress', 'shared_state');
-
-        // Subscribe to live updates in real-time
-        onSnapshot(tripDocRef, (snap) => {
-          if (snap.exists()) {
-            const data = snap.data();
-            appState.completedStops = data.completedStops || {};
-            appState.driverGps = data.driverGps || null;
-            recalcActiveStop();
-            updateUI();
-            updateMapDisplay();
-          } else {
-            // Seed initial state
-            persistState();
-          }
-        }, (err) => {
-          console.error("Firestore onSnapshot error:", err);
-          showToast("Sync error: " + err.message, "error");
-        });
-
-      } catch (err) {
-        console.error("Firebase init failed:", err);
-        loadLocalFallback();
-      }
+    if (isViewer) {
+      document.getElementById('modeBadge').textContent = 'Viewer Mode (Read-Only)';
+      document.getElementById('modeBadge').className = 'text-xs px-2.5 py-1 rounded-full font-medium bg-sky-950 text-sky-400 border border-sky-800';
+      document.getElementById('filterNote').textContent = 'Live updates from driver';
     }
 
-    function loadLocalFallback() {
-      // Local state fallback for test environments without Firebase config
-      try {
-        const stored = sessionStorage.getItem('trip_local_state');
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          appState.completedStops = parsed.completedStops || {};
-          appState.driverGps = parsed.driverGps || null;
-        }
-      } catch (e) {}
-      recalcActiveStop();
-      updateUI();
-      updateMapDisplay();
-    }
+    let completedStops = JSON.parse(localStorage.getItem('roadtrip_completed_stops') || '[]');
 
-    async function persistState() {
-      recalcActiveStop();
-      if (tripDocRef && auth?.currentUser) {
-        try {
-          await setDoc(tripDocRef, {
-            completedStops: appState.completedStops,
-            driverGps: appState.driverGps,
-            lastUpdated: new Date().toISOString()
-          }, { merge: true });
-        } catch (e) {
-          console.error("Error saving state to Firestore:", e);
-        }
-      } else {
-        // Fallback store
-        try {
-          sessionStorage.setItem('trip_local_state', JSON.stringify({
-            completedStops: appState.completedStops,
-            driverGps: appState.driverGps
-          }));
-        } catch(e) {}
-      }
-      updateUI();
-      updateMapDisplay();
-    }
+    const map = L.map('map').setView([31.5, -99.5], 4);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
 
-    function recalcActiveStop() {
-      let nextIdx = 0;
-      for (let i = 0; i < ITINERARY.length; i++) {
-        if (!appState.completedStops[ITINERARY[i].id]) {
-          nextIdx = i;
-          break;
-        }
-        if (i === ITINERARY.length - 1) {
-          nextIdx = ITINERARY.length - 1; // All complete
-        }
-      }
-      appState.activeStopIndex = nextIdx;
-    }
+    const latlngs = STOPS_DATA.map(s => [s.lat, s.lng]);
+    const routeLine = L.polyline(latlngs, { color: '#0284c7', weight: 4, opacity: 0.8 }).addTo(map);
+    map.fitBounds(routeLine.getBounds(), { padding: [25, 25] });
 
-    // --- Map Initialization with Leaflet ---
-    function initMap() {
-      const startCoord = [ITINERARY[0].lat, ITINERARY[0].lng];
-      map = L.map('map', {
-        zoomControl: true,
-        scrollWheelZoom: false
-      }).setView(startCoord, 5);
-
-      // Initialize Map with 100% Free OpenStreetMap (No API Key Required)
-const map = L.map('map').setView([31.5, -99.5], 4);
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19,
-  attribution: '&copy; OpenStreetMap contributors'
-}).addTo(map);
-
-      // Draw overall route line
-      const latLngs = ITINERARY.map(s => [s.lat, s.lng]);
-      polyline = L.polyline(latLngs, {
-        color: '#0284c7',
-        weight: 4,
-        opacity: 0.7,
-        dashArray: '8, 8',
-        smoothFactor: 1
+    const markers = [];
+    STOPS_DATA.forEach((s) => {
+      const isDone = completedStops.includes(s.id);
+      const marker = L.circleMarker([s.lat, s.lng], {
+        radius: s.type === 'hotel' ? 7 : 5,
+        color: isDone ? '#10b981' : (s.type === 'hotel' ? '#f59e0b' : '#38bdf8'),
+        fillColor: isDone ? '#10b981' : (s.type === 'hotel' ? '#f59e0b' : '#0284c7'),
+        fillOpacity: 0.9,
+        weight: 2
       }).addTo(map);
+      marker.bindPopup(`<b>${s.name}</b><br>${s.time}<br>${s.address}`);
+      markers.push(marker);
+    });
 
-      map.fitBounds(polyline.getBounds(), { padding: [30, 30] });
-
-      // Place initial markers
-      renderMapMarkers();
-    }
-
-    function createCustomMarkerIcon(status, isHotel, isFinish) {
-      let bgColor = 'bg-slate-600';
-      let iconClass = 'fa-gas-pump';
-      let ringClass = '';
-
-      if (isHotel) {
-        iconClass = 'fa-bed';
-      } else if (isFinish) {
-        iconClass = 'fa-flag-checkered';
-      }
-
-      if (status === 'completed') {
-        bgColor = 'bg-emerald-500';
-        iconClass = 'fa-check';
-      } else if (status === 'active') {
-        bgColor = 'bg-sky-500';
-        ringClass = 'ring-4 ring-sky-400/40 animate-pulse';
-      }
-
-      return L.divIcon({
-        className: 'custom-pin',
-        html: `<div class="w-8 h-8 rounded-full ${bgColor} ${ringClass} text-white flex items-center justify-center text-xs font-bold shadow-lg border-2 border-white">
-                <i class="fa-solid ${iconClass}"></i>
-               </div>`,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16],
-        popupAnchor: [0, -18]
-      });
-    }
-
-    function renderMapMarkers() {
-      // Clear existing
-      markers.forEach(m => map.removeLayer(m));
-      markers = [];
-
-      ITINERARY.forEach((stop, idx) => {
-        const isCompleted = !!appState.completedStops[stop.id];
-        const isActive = (idx === appState.activeStopIndex && !isCompleted);
-        const status = isCompleted ? 'completed' : (isActive ? 'active' : 'upcoming');
-        const isHotel = stop.type === 'hotel';
-        const isFinish = stop.type === 'destination';
-
-        const icon = createCustomMarkerIcon(status, isHotel, isFinish);
-        const marker = L.marker([stop.lat, stop.lng], { icon: icon }).addTo(map);
-
-        const checkInTime = appState.completedStops[stop.id] 
-          ? `<div class="text-[11px] text-emerald-600 font-semibold mt-1">✓ Reached: ${new Date(appState.completedStops[stop.id]).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>`
-          : `<div class="text-[11px] text-slate-500 font-medium mt-1">Scheduled: ${stop.schedArrival}</div>`;
-
-        marker.bindPopup(`
-          <div class="font-sans text-slate-900 p-1">
-            <div class="text-xs font-bold text-sky-700 uppercase">Day ${stop.day} • ${stop.type.toUpperCase()}</div>
-            <div class="text-sm font-bold mt-0.5">${stop.name}</div>
-            <div class="text-xs text-slate-600">${stop.address}</div>
-            ${checkInTime}
-            <div class="mt-2 flex gap-1.5">
-              <a href="https://maps.apple.com/?daddr=${encodeURIComponent(stop.address)}" target="_blank" class="px-2 py-1 text-[10px] bg-slate-800 text-white rounded font-bold">Apple Maps</a>
-              <a href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(stop.address)}" target="_blank" class="px-2 py-1 text-[10px] bg-sky-600 text-white rounded font-bold">Google Maps</a>
-            </div>
-          </div>
-        `);
-
-        markers.push(marker);
-      });
-    }
-
-    function updateMapDisplay() {
-      if (!map) return;
-      renderMapMarkers();
-
-      // Update Live Driver GPS marker
-      if (appState.driverGps) {
-        const gpsLatLng = [appState.driverGps.lat, appState.driverGps.lng];
-        if (!gpsMarker) {
-          const gpsIcon = L.divIcon({
-            className: 'driver-gps-icon',
-            html: `<div class="relative flex items-center justify-center">
-                     <span class="gps-pulse absolute inline-flex h-9 w-9 rounded-full bg-sky-400 opacity-75"></span>
-                     <div class="w-5 h-5 rounded-full bg-sky-600 border-2 border-white shadow-xl flex items-center justify-center text-[10px] text-white font-bold">
-                       <i class="fa-solid fa-car"></i>
-                     </div>
-                   </div>`,
-            iconSize: [36, 36],
-            iconAnchor: [18, 18]
-          });
-          gpsMarker = L.marker(gpsLatLng, { icon: gpsIcon, zIndexOffset: 1000 }).addTo(map);
-          gpsMarker.bindPopup('<b class="text-xs">Live Vehicle Position (Lexus RX300)</b>');
-        } else {
-          gpsMarker.setLatLng(gpsLatLng);
-        }
-      }
-    }
-
-    // --- UI Rendering & Metrics Calculation ---
-    function updateUI() {
-      // 1. Calculate Metrics
-      let completedCount = 0;
-      let milesDriven = 0;
-      let fuelBurned = 0;
-      let fuelSpent = 0;
-
-      ITINERARY.forEach((s) => {
-        if (appState.completedStops[s.id]) {
-          completedCount++;
-          milesDriven += s.legMiles;
-          fuelBurned += s.gallons;
-          fuelSpent += s.cost;
-        }
-      });
-
-      const pctComplete = Math.round((completedCount / ITINERARY.length) * 100);
-      const milesPct = Math.min(100, Math.round((milesDriven / TOTAL_MILES) * 100));
-
-      // 2. Update Progress Bar & Stat Badges
-      document.getElementById('statCompletedStops').innerText = completedCount;
-      document.getElementById('statProgressBar').style.width = `${pctComplete}%`;
-      document.getElementById('statMilesDriven').innerText = Math.round(milesDriven);
-      document.getElementById('statMilesPct').innerText = `${milesPct}% of total 2,558 miles`;
-      document.getElementById('statFuelBurned').innerText = fuelBurned.toFixed(1);
-      document.getElementById('statFuelSpend').innerText = `$${fuelSpent.toFixed(2)}`;
-
-      // 3. Update Active Target Card
-      const active = ITINERARY[appState.activeStopIndex];
-      const isAllDone = completedCount === ITINERARY.length;
-
-      const activeCard = document.getElementById('currentMilestoneCard');
-      const activeName = document.getElementById('activeName');
-      const activeAddress = document.getElementById('activeAddress');
-      const activeEta = document.getElementById('activeEta');
-      const activeDayBadge = document.getElementById('activeDayBadge');
-      const activeFuelInfo = document.getElementById('activeFuelInfo');
-      const checkInBtn = document.getElementById('checkInBtn');
-      const activeAppleMaps = document.getElementById('activeAppleMaps');
-      const activeGoogleMaps = document.getElementById('activeGoogleMaps');
-
-      if (isAllDone) {
-        activeName.innerText = "🎉 All Milestones Completed!";
-        activeAddress.innerHTML = `<span>Welcome to Port Charlotte, FL (326 Perl St)!</span>`;
-        activeEta.innerHTML = `Status: <span class="text-emerald-400 font-bold">Trip Completed</span>`;
-        activeDayBadge.innerText = "Finished";
-        activeFuelInfo.innerHTML = `<span>Total Road Trip Distance: 2,557.8 miles</span>`;
-        checkInBtn.classList.add('hidden');
-        activeAppleMaps.classList.add('hidden');
-        activeGoogleMaps.classList.add('hidden');
+    function toggleStop(id) {
+      if (isViewer) return;
+      if (completedStops.includes(id)) {
+        completedStops = completedStops.filter(item => item !== id);
       } else {
-        activeName.innerText = active.name;
-        activeAddress.innerHTML = `<i class="fa-solid fa-location-dot text-sky-400 mt-1"></i><span>${active.address}</span>`;
-        activeEta.innerHTML = `Target ETA: <span class="text-sky-400 font-bold">${active.schedArrival}</span>`;
-        activeDayBadge.innerText = `Day ${active.day} Milestone`;
-
-        let fuelHtml = `<span><i class="fa-solid fa-route text-slate-500 mr-1"></i>Leg: ${active.legMiles} mi</span>`;
-        if (active.type === 'fuel') {
-          fuelHtml += `<span>•</span><span><i class="fa-solid fa-gas-pump text-amber-400 mr-1"></i>Fill: ${active.gallons} gal ($${active.fuelPrice}/gal)</span>`;
-          fuelHtml += `<span>•</span><span class="text-emerald-400 font-semibold">$${active.cost.toFixed(2)}</span>`;
-        } else if (active.type === 'hotel') {
-          fuelHtml += `<span>•</span><span class="text-indigo-400 font-semibold"><i class="fa-solid fa-moon mr-1"></i>Overnight Sleep Stop</span>`;
-        }
-        activeFuelInfo.innerHTML = fuelHtml;
-
-        // Navigation Links
-        activeAppleMaps.href = `https://maps.apple.com/?daddr=${encodeURIComponent(active.address)}&dirflg=d`;
-        activeGoogleMaps.href = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(active.address)}`;
-        activeAppleMaps.classList.remove('hidden');
-        activeGoogleMaps.classList.remove('hidden');
-
-        // Check in button state
-        if (appState.isDriver) {
-          checkInBtn.classList.remove('hidden');
-          checkInBtn.onclick = () => performCheckIn(active.id);
-        } else {
-          checkInBtn.classList.add('hidden');
-        }
+        completedStops.push(id);
       }
-
-      // 4. Update Mode UI
-      const modeText = document.getElementById('modeText');
-      const modeBadge = document.getElementById('modeBadge');
-      const gpsToggleBtn = document.getElementById('gpsToggleBtn');
-      const resetDemoBtn = document.getElementById('resetDemoBtn');
-      const viewerNotice = document.getElementById('viewerNotice');
-
-      if (appState.isDriver) {
-        modeText.innerText = "Driver Mode";
-        modeBadge.className = "flex items-center bg-sky-600/30 border border-sky-500 text-sky-300 rounded-lg p-0.5";
-        gpsToggleBtn.classList.remove('hidden');
-        resetDemoBtn.classList.remove('hidden');
-        viewerNotice.innerText = "Driver controls enabled — tap check in at each stop";
-      } else {
-        modeText.innerText = "Viewer Mode";
-        modeBadge.className = "flex items-center bg-slate-800 border border-slate-700 text-slate-400 rounded-lg p-0.5";
-        gpsToggleBtn.classList.add('hidden');
-        resetDemoBtn.classList.add('hidden');
-        viewerNotice.innerText = "Read-only live viewer mode";
-      }
-
-      // 5. Render Stops List
-      renderStopsList();
+      localStorage.setItem('roadtrip_completed_stops', JSON.stringify(completedStops));
+      render();
     }
 
-    function renderStopsList() {
+    function render() {
       const container = document.getElementById('stopsContainer');
       container.innerHTML = '';
 
-      const filtered = ITINERARY.filter(stop => {
-        if (appState.currentFilterDay === 'all') return true;
-        return stop.day === parseInt(appState.currentFilterDay);
-      });
+      let totalSpent = 0;
+      let nextTarget = null;
 
-      filtered.forEach((stop, idx) => {
-        const isCompleted = !!appState.completedStops[stop.id];
-        const isActive = (stop.id === ITINERARY[appState.activeStopIndex]?.id && !isCompleted);
-
-        let borderClass = 'border-slate-800 bg-slate-800/50';
-        let badge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-700 text-slate-300">Upcoming</span>`;
-
-        if (isCompleted) {
-          borderClass = 'border-emerald-500/40 bg-emerald-950/20';
-          const timeStr = new Date(appState.completedStops[stop.id]).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          badge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">✓ Reached at ${timeStr}</span>`;
-        } else if (isActive) {
-          borderClass = 'border-sky-500/70 bg-sky-950/30 shadow-md shadow-sky-500/10 ring-1 ring-sky-500/40';
-          badge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-sky-500/20 text-sky-400 border border-sky-500/30 animate-pulse">Current Target</span>`;
+      STOPS_DATA.forEach(s => {
+        const isDone = completedStops.includes(s.id);
+        if (isDone && s.price > 0 && s.gal > 0) {
+          totalSpent += (s.price * s.gal);
+        }
+        if (!isDone && nextTarget === null) {
+          nextTarget = s;
         }
 
-        let typeIcon = 'fa-gas-pump text-amber-400';
-        if (stop.type === 'origin') typeIcon = 'fa-play text-emerald-400';
-        if (stop.type === 'hotel') typeIcon = 'fa-bed text-indigo-400';
-        if (stop.type === 'destination') typeIcon = 'fa-flag-checkered text-pink-400';
+        if (markers[s.id]) {
+          markers[s.id].setStyle({
+            color: isDone ? '#10b981' : (s.type === 'hotel' ? '#f59e0b' : '#38bdf8'),
+            fillColor: isDone ? '#10b981' : (s.type === 'hotel' ? '#f59e0b' : '#0284c7')
+          });
+        }
+
+        const appleMapsUrl = `https://maps.apple.com/?daddr=${encodeURIComponent(s.address)}&dirflg=d`;
+        const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(s.address)}`;
 
         const card = document.createElement('div');
-        card.className = `p-4 rounded-xl border ${borderClass} transition duration-200`;
-        card.innerHTML = `
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div class="flex items-start gap-3">
-              <div class="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0 mt-0.5">
-                <i class="fa-solid ${typeIcon} text-sm"></i>
-              </div>
-              <div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span class="text-xs font-bold text-slate-400 uppercase">Day ${stop.day}</span>
-                  ${badge}
-                </div>
-                <h4 class="text-sm sm:text-base font-bold text-white mt-1 leading-snug">${stop.name}</h4>
-                <p class="text-xs text-slate-300 mt-0.5">${stop.address}</p>
-                
-                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-slate-400 font-medium">
-                  <span><i class="fa-regular fa-clock text-slate-500 mr-1"></i>Arrival: <b class="text-slate-200">${stop.schedArrival}</b></span>
-                  ${stop.legMiles > 0 ? `<span>•</span><span>Leg: ${stop.legMiles} mi</span>` : ''}
-                  ${stop.gallons > 0 ? `<span>•</span><span>Fill: ${stop.gallons} gal ($${stop.fuelPrice}/gal)</span>` : ''}
-                  ${stop.cost > 0 ? `<span>•</span><span class="text-emerald-400 font-semibold">$${stop.cost.toFixed(2)}</span>` : ''}
-                </div>
+        card.className = `p-3.5 rounded-xl border transition-all ${
+          isDone 
+            ? 'bg-slate-800/50 border-emerald-900/60 opacity-80' 
+            : (nextTarget && nextTarget.id === s.id 
+                ? 'bg-slate-800 border-sky-500 ring-1 ring-sky-500 shadow-lg' 
+                : 'bg-slate-800/90 border-slate-700')
+        }`;
 
-                ${stop.notes ? `<div class="text-[11px] text-slate-400 italic mt-1.5 bg-slate-900/60 p-2 rounded-lg border border-slate-800/80">${stop.notes}</div>` : ''}
+        let icon = '⛽';
+        if (s.type === 'hotel') icon = '🏨';
+        if (s.type === 'origin') icon = '🏠';
+        if (s.type === 'destination') icon = '🏁';
+
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex items-start gap-2.5">
+              <span class="text-xl mt-0.5">${icon}</span>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h3 class="font-bold text-sm ${isDone ? 'line-through text-slate-400' : 'text-white'}">${s.name}</h3>
+                  <span class="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-slate-700 text-slate-300">Day ${s.day}</span>
+                </div>
+                <p class="text-xs text-slate-400 mt-0.5">${s.address}</p>
+                <div class="flex flex-wrap items-center gap-3 text-xs mt-1.5 text-slate-300">
+                  <span class="text-sky-400 font-medium">🕒 ETA: ${s.time}</span>
+                  ${s.price > 0 ? `<span class="text-emerald-400 font-medium">$${s.price.toFixed(2)}/gal</span>` : ''}
+                  ${s.gal > 0 ? `<span class="text-amber-400 font-medium">${s.gal.toFixed(2)} gal</span>` : ''}
+                  <span class="text-slate-400">Tank: ~${s.fuelLeft.toFixed(1)} gal</span>
+                </div>
+                <p class="text-xs text-slate-400/90 italic mt-1">${s.notes}</p>
               </div>
             </div>
-
-            <div class="flex items-center gap-2 self-end sm:self-center shrink-0 mt-2 sm:mt-0">
-              <a href="https://maps.apple.com/?daddr=${encodeURIComponent(stop.address)}&dirflg=d" target="_blank" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs border border-slate-700" title="Open in Apple Maps">
-                <i class="fa-brands fa-apple text-sm"></i>
-              </a>
-              <a href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(stop.address)}" target="_blank" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs border border-slate-700" title="Open in Google Maps">
-                <i class="fa-solid fa-location-arrow text-emerald-400 text-xs"></i>
-              </a>
-              ${appState.isDriver ? `
-                <button data-checkin="${stop.id}" class="checkin-btn px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${isCompleted ? 'bg-slate-800 text-slate-400 hover:text-rose-400' : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow'}">
-                  <i class="fa-solid ${isCompleted ? 'fa-rotate-left' : 'fa-check'}"></i>
-                  <span>${isCompleted ? 'Undo' : 'Check In'}</span>
+            
+            <div class="flex flex-col items-end gap-2 shrink-0">
+              ${!isViewer ? `
+                <button onclick="toggleStop(${s.id})" class="px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
+                  isDone 
+                    ? 'bg-emerald-900/40 text-emerald-300 border border-emerald-700 hover:bg-emerald-900/60' 
+                    : (nextTarget && nextTarget.id === s.id 
+                        ? 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-md animate-pulse' 
+                        : 'bg-slate-700 text-slate-200 hover:bg-slate-600')
+                }">
+                  ${isDone ? '✓ Checked In' : (nextTarget && nextTarget.id === s.id ? 'Check In Here' : 'Mark Done')}
                 </button>
-              ` : ''}
+              ` : `
+                <span class="text-xs font-semibold px-2.5 py-1 rounded-full ${isDone ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-slate-700/60 text-slate-400'}">
+                  ${isDone ? '✓ Completed' : 'Pending'}
+                </span>
+              `}
+              <div class="flex items-center gap-1.5">
+                <a href="${appleMapsUrl}" target="_blank" class="text-[11px] bg-slate-700/80 hover:bg-slate-600 text-slate-300 px-2 py-0.5 rounded border border-slate-600">Apple</a>
+                <a href="${googleMapsUrl}" target="_blank" class="text-[11px] bg-slate-700/80 hover:bg-slate-600 text-slate-300 px-2 py-0.5 rounded border border-slate-600">Google</a>
+              </div>
             </div>
           </div>
         `;
         container.appendChild(card);
       });
 
-      // Attach check in buttons
-      if (appState.isDriver) {
-        document.querySelectorAll('.checkin-btn').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-            const stopId = btn.getAttribute('data-checkin');
-            toggleCheckIn(stopId);
-          });
-        });
-      }
-    }
+      const count = completedStops.length;
+      const pct = Math.round((count / STOPS_DATA.length) * 100);
+      document.getElementById('progressText').textContent = `${count} of ${STOPS_DATA.length} Completed (${pct}%)`;
+      document.getElementById('progressBar').style.width = `${pct}%`;
+      document.getElementById('totalSpentText').textContent = `$${totalSpent.toFixed(2)}`;
 
-    // --- Action Handlers ---
-    function performCheckIn(stopId) {
-      const stop = ITINERARY.find(s => s.id === stopId);
-      appState.completedStops[stopId] = new Date().toISOString();
-      persistState();
-      showToast(`Checked in: ${stop ? stop.name : 'Milestone marked complete'}`);
-    }
-
-    function toggleCheckIn(stopId) {
-      if (appState.completedStops[stopId]) {
-        delete appState.completedStops[stopId];
-        showToast("Check-in undone", "info");
+      if (nextTarget) {
+        document.getElementById('currentLegText').textContent = nextTarget.name;
+        document.getElementById('estFuelText').textContent = `~${nextTarget.fuelLeft.toFixed(1)} Gal`;
       } else {
-        appState.completedStops[stopId] = new Date().toISOString();
-        const stop = ITINERARY.find(s => s.id === stopId);
-        showToast(`Checked in: ${stop ? stop.name : 'Milestone complete'}`);
-      }
-      persistState();
-    }
-
-    // --- Geolocation Broadcasting ---
-    function toggleGpsBroadcast() {
-      const gpsBtnText = document.getElementById('gpsBtnText');
-      const gpsBtn = document.getElementById('gpsToggleBtn');
-
-      if (watchId !== null) {
-        // Stop watching
-        navigator.geolocation.clearWatch(watchId);
-        watchId = null;
-        gpsBtnText.innerText = "Broadcast Phone GPS";
-        gpsBtn.classList.remove('bg-emerald-600');
-        gpsBtn.classList.add('bg-sky-600');
-        showToast("GPS Broadcasting stopped", "info");
-      } else {
-        if (!navigator.geolocation) {
-          showToast("Geolocation is not supported by your browser.", "error");
-          return;
-        }
-
-        gpsBtnText.innerText = "Broadcasting GPS...";
-        gpsBtn.classList.remove('bg-sky-600');
-        gpsBtn.classList.add('bg-emerald-600');
-
-        watchId = navigator.geolocation.watchPosition(
-          (pos) => {
-            appState.driverGps = {
-              lat: pos.coords.latitude,
-              lng: pos.coords.longitude,
-              speed: pos.coords.speed,
-              lastUpdated: new Date().toISOString()
-            };
-            persistState();
-          },
-          (err) => {
-            console.warn("GPS error:", err.message);
-            showToast("GPS access denied or unavailable: " + err.message, "error");
-            gpsBtnText.innerText = "Broadcast Phone GPS";
-            gpsBtn.classList.remove('bg-emerald-600');
-            gpsBtn.classList.add('bg-sky-600');
-            watchId = null;
-          },
-          { enableHighAccuracy: true, timeout: 20000, maximumAge: 5000 }
-        );
-        showToast("Live GPS broadcasting active!");
+        document.getElementById('currentLegText').textContent = 'Trip Complete! 🏁';
+        document.getElementById('estFuelText').textContent = '~15.0 Gal';
       }
     }
 
-    // --- Toast Notifications ---
-    function showToast(message, type = "success") {
-      const toast = document.getElementById('toast');
-      const toastMsg = document.getElementById('toastMsg');
-      const toastIcon = document.getElementById('toastIcon');
-
-      toastMsg.innerText = message;
-      if (type === "error") {
-        toastIcon.className = "fa-solid fa-triangle-exclamation text-rose-400";
-      } else if (type === "info") {
-        toastIcon.className = "fa-solid fa-circle-info text-sky-400";
-      } else {
-        toastIcon.className = "fa-solid fa-circle-check text-emerald-400";
-      }
-
-      toast.classList.remove('opacity-0', 'pointer-events-none');
-      toast.classList.add('opacity-100');
-
-      setTimeout(() => {
-        toast.classList.remove('opacity-100');
-        toast.classList.add('opacity-0', 'pointer-events-none');
-      }, 3200);
+    function copyViewerLink() {
+      const base = window.location.origin + window.location.pathname;
+      const viewerUrl = base + '?mode=viewer';
+      navigator.clipboard.writeText(viewerUrl).then(() => {
+        const btn = document.getElementById('copyShareBtn');
+        btn.innerHTML = '<span>✓</span> Link Copied!';
+        setTimeout(() => {
+          btn.innerHTML = '<span>🔗</span> Share Link';
+        }, 2500);
+      }).catch(() => {
+        prompt('Copy this viewer link to send to family:', window.location.href + '?mode=viewer');
+      });
     }
 
-    // --- Share Modal & Clipboard Link ---
-    function openShareModal() {
-      const modal = document.getElementById('shareModal');
-      const input = document.getElementById('shareLinkInput');
-      // Viewer link automatically adds parameter ?view=viewer
-      const url = new URL(window.location.href);
-      url.searchParams.set('mode', 'viewer');
-      input.value = url.toString();
-
-      document.getElementById('copySuccessMsg').classList.add('hidden');
-      document.getElementById('copyBtnLabel').innerText = "Copy";
-      modal.classList.remove('hidden');
-    }
-
-    function copyShareLink() {
-      const input = document.getElementById('shareLinkInput');
-      input.select();
-      input.setSelectionRange(0, 99999);
-      document.execCommand('copy');
-
-      document.getElementById('copyBtnLabel').innerText = "Copied!";
-      document.getElementById('copySuccessMsg').classList.remove('hidden');
-      showToast("Viewer link copied to clipboard!");
-    }
-
-    // --- Initialization & Event Listeners ---
-    window.onload = function() {
-      // Check query parameter for mode
-      const params = new URLSearchParams(window.location.search);
-      const modeParam = params.get('mode');
-
-      // Default to Driver Mode unless explicitly loaded with ?mode=viewer
-      appState.isDriver = (modeParam !== 'viewer');
-
-      initMap();
-      setupFirebase();
-
-      // Driver Mode Toggle Button
-      document.getElementById('driverModeToggle').addEventListener('click', () => {
-        appState.isDriver = !appState.isDriver;
-        updateUI();
-        showToast(appState.isDriver ? "Driver Mode enabled (Check-ins active)" : "Switched to Viewer Mode (Read-Only)", "info");
-      });
-
-      // GPS Broadcast
-      document.getElementById('gpsToggleBtn').addEventListener('click', toggleGpsBroadcast);
-
-      // Share Modal
-      document.getElementById('shareBtn').addEventListener('click', openShareModal);
-      document.getElementById('closeShareModal').addEventListener('click', () => {
-        document.getElementById('shareModal').classList.add('hidden');
-      });
-      document.getElementById('copyShareBtn').addEventListener('click', copyShareLink);
-
-      // Reset Demo Button
-      document.getElementById('resetDemoBtn').addEventListener('click', () => {
-        appState.completedStops = {};
-        appState.driverGps = null;
-        persistState();
-        showToast("Trip progress reset to beginning", "info");
-      });
-
-      // Day Filter Tabs
-      document.querySelectorAll('.day-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-          document.querySelectorAll('.day-tab').forEach(t => {
-            t.className = "day-tab px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition";
-          });
-          tab.className = "day-tab px-3.5 py-1.5 rounded-xl text-xs font-bold transition bg-sky-500 text-white shadow-md shadow-sky-500/20";
-          appState.currentFilterDay = tab.getAttribute('data-day');
-          renderStopsList();
-        });
-      });
-    };
+    render();
   </script>
 </body>
 </html>
