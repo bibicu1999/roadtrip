@@ -742,7 +742,8 @@
       }).setView(startCoord, 5);
 
       // Clean CartoDB Dark Matter / Positron tiles for high-contrast road trip visualization
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      // REPLACE THIS:
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
         maxZoom: 18
       }).addTo(map);
