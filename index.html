@@ -38,13 +38,22 @@
         </h1>
         <p class="text-xs text-slate-400">2000 Lexus RX300 AWD • 2,558 mi • I-10 to I-75</p>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2 flex-wrap">
         <span id="modeBadge" class="text-xs px-2.5 py-1 rounded-full font-medium bg-emerald-950 text-emerald-400 border border-emerald-800">
           Driver Mode
         </span>
-        <button id="gpsToggleBtn" onclick="toggleGpsTracking()" class="text-xs bg-emerald-700 hover:bg-emerald-600 text-white font-medium px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5">
-          <span>📡</span> <span id="gpsBtnLabel">Share GPS Location</span>
+        
+        <!-- Dedicated Start GPS Button -->
+        <button id="startGpsBtn" onclick="startGpsTracking()" class="text-xs bg-emerald-700 hover:bg-emerald-600 text-white font-medium px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5 cursor-pointer">
+          <span>📡</span> <span>Start GPS</span>
         </button>
+
+        <!-- Dedicated Stop GPS Button -->
+        <button id="stopGpsBtn" onclick="stopGpsTracking()" class="text-xs bg-slate-700 text-slate-400 font-medium px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5 cursor-not-allowed opacity-60" disabled>
+          <span>⏹</span> <span>Stop GPS</span>
+        </button>
+
+        <!-- Share Viewer Link Button -->
         <button id="copyShareBtn" onclick="copyViewerLink()" class="text-xs bg-sky-600 hover:bg-sky-500 text-white font-medium px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1">
           <span>🔗</span> Share Link
         </button>
@@ -85,7 +94,10 @@
         <div class="flex items-center gap-2">
           <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Live Route Map</span>
           <span id="gpsStatusPill" class="hidden text-[10px] px-2 py-0.5 rounded-full font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800 animate-pulse">
-            ● GPS Active
+            ● GPS Broadcasting
+          </span>
+          <span id="gpsInactivePill" class="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-slate-800 text-slate-400 border border-slate-700">
+            ○ GPS Off
           </span>
         </div>
         <span class="text-xs text-slate-400" id="mapStatus">OpenStreetMap (No API Key Required)</span>
@@ -137,8 +149,10 @@
       document.getElementById('modeBadge').textContent = 'Viewer Mode (Read-Only)';
       document.getElementById('modeBadge').className = 'text-xs px-2.5 py-1 rounded-full font-medium bg-sky-950 text-sky-400 border border-sky-800';
       document.getElementById('filterNote').textContent = 'Live updates from driver';
-      const gpsBtn = document.getElementById('gpsToggleBtn');
-      if (gpsBtn) gpsBtn.style.display = 'none';
+      const startBtn = document.getElementById('startGpsBtn');
+      const stopBtn = document.getElementById('stopGpsBtn');
+      if (startBtn) startBtn.style.display = 'none';
+      if (stopBtn) stopBtn.style.display = 'none';
     }
 
     let completedStops = JSON.parse(localStorage.getItem('roadtrip_completed_stops') || '[]');
@@ -170,59 +184,80 @@
     let gpsWatchId = null;
     let userLocationMarker = null;
 
-    function toggleGpsTracking() {
-      const btn = document.getElementById('gpsToggleBtn');
-      const pill = document.getElementById('gpsStatusPill');
-
-      if (gpsWatchId !== null) {
-        navigator.geolocation.clearWatch(gpsWatchId);
-        gpsWatchId = null;
-        if (userLocationMarker) {
-          map.removeLayer(userLocationMarker);
-          userLocationMarker = null;
-        }
-        btn.className = "text-xs bg-emerald-700 hover:bg-emerald-600 text-white font-medium px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5";
-        btn.innerHTML = "<span>📡</span> <span id='gpsBtnLabel'>Share GPS Location</span>";
-        pill.classList.add('hidden');
-        document.getElementById('mapStatus').textContent = "OpenStreetMap (GPS Inactive)";
-      } else {
-        if (!navigator.geolocation) {
-          alert("Geolocation is not supported by your browser.");
-          return;
-        }
-
-        btn.className = "text-xs bg-rose-700 hover:bg-rose-600 text-white font-medium px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5";
-        btn.innerHTML = "<span>⏹</span> <span id='gpsBtnLabel'>Stop Sharing GPS</span>";
-        pill.classList.remove('hidden');
-        document.getElementById('mapStatus').textContent = "Locating vehicle...";
-
-        gpsWatchId = navigator.geolocation.watchPosition(
-          (pos) => {
-            const lat = pos.coords.latitude;
-            const lng = pos.coords.longitude;
-            const speedMph = pos.coords.speed ? (pos.coords.speed * 2.23694).toFixed(0) : 0;
-
-            if (!userLocationMarker) {
-              const carIcon = L.divIcon({
-                className: 'pulse-car',
-                iconSize: [18, 18],
-                iconAnchor: [9, 9]
-              });
-              userLocationMarker = L.marker([lat, lng], { icon: carIcon }).addTo(map);
-            } else {
-              userLocationMarker.setLatLng([lat, lng]);
-            }
-
-            userLocationMarker.bindPopup(`<b>Your Lexus RX300</b><br>Speed: ${speedMph} mph<br>Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`);
-            document.getElementById('mapStatus').textContent = `Speed: ${speedMph} mph • Live GPS Tracking`;
-          },
-          (err) => {
-            alert("Unable to retrieve GPS: " + err.message);
-            toggleGpsTracking();
-          },
-          { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 }
-        );
+    function startGpsTracking() {
+      if (gpsWatchId !== null) return;
+      if (!navigator.geolocation) {
+        alert("Geolocation is not supported by your browser.");
+        return;
       }
+
+      const startBtn = document.getElementById('startGpsBtn');
+      const stopBtn = document.getElementById('stopGpsBtn');
+      const activePill = document.getElementById('gpsStatusPill');
+      const inactivePill = document.getElementById('gpsInactivePill');
+
+      startBtn.disabled = true;
+      startBtn.className = "text-xs bg-slate-700 text-slate-400 font-medium px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5 cursor-not-allowed opacity-60";
+      
+      stopBtn.disabled = false;
+      stopBtn.className = "text-xs bg-rose-700 hover:bg-rose-600 text-white font-medium px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5 cursor-pointer opacity-100";
+
+      activePill.classList.remove('hidden');
+      inactivePill.classList.add('hidden');
+      document.getElementById('mapStatus').textContent = "Acquiring GPS fix...";
+
+      gpsWatchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          const speedMph = pos.coords.speed ? (pos.coords.speed * 2.23694).toFixed(0) : 0;
+
+          if (!userLocationMarker) {
+            const carIcon = L.divIcon({
+              className: 'pulse-car',
+              iconSize: [18, 18],
+              iconAnchor: [9, 9]
+            });
+            userLocationMarker = L.marker([lat, lng], { icon: carIcon }).addTo(map);
+          } else {
+            userLocationMarker.setLatLng([lat, lng]);
+          }
+
+          userLocationMarker.bindPopup(`<b>Your Lexus RX300</b><br>Speed: ${speedMph} mph<br>Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`);
+          document.getElementById('mapStatus').textContent = `Speed: ${speedMph} mph • Live GPS Tracking`;
+        },
+        (err) => {
+          alert("GPS Alert: " + err.message);
+          stopGpsTracking();
+        },
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 }
+      );
+    }
+
+    function stopGpsTracking() {
+      if (gpsWatchId === null) return;
+      navigator.geolocation.clearWatch(gpsWatchId);
+      gpsWatchId = null;
+
+      if (userLocationMarker) {
+        map.removeLayer(userLocationMarker);
+        userLocationMarker = null;
+      }
+
+      const startBtn = document.getElementById('startGpsBtn');
+      const stopBtn = document.getElementById('stopGpsBtn');
+      const activePill = document.getElementById('gpsStatusPill');
+      const inactivePill = document.getElementById('gpsInactivePill');
+
+      startBtn.disabled = false;
+      startBtn.className = "text-xs bg-emerald-700 hover:bg-emerald-600 text-white font-medium px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5 cursor-pointer opacity-100";
+
+      stopBtn.disabled = true;
+      stopBtn.className = "text-xs bg-slate-700 text-slate-400 font-medium px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5 cursor-not-allowed opacity-60";
+
+      activePill.classList.add('hidden');
+      inactivePill.classList.remove('hidden');
+      document.getElementById('mapStatus').textContent = "OpenStreetMap (GPS Stopped)";
     }
 
     function toggleStop(id) {
